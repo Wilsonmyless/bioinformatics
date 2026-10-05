@@ -31,8 +31,8 @@
     <div class="lesson-body"><h3>R is a calculator—and much more</h3><p>R evaluates expressions and returns a result. For example, <code style="color:#c5e5b5;font-family:var(--mono)">2 + 2</code> evaluates to <code style="color:#c5e5b5;font-family:var(--mono)">4</code>. In bioinformatics, you’ll use the same idea to transform measurements, summarize samples, and make plots.</p><div class="callout"><strong>Research note</strong> &nbsp;A calculation is only as meaningful as its inputs. We’ll keep track of what each value represents as we move from toy examples to biological measurements.</div>
     <div class="taskline"><b>Try it yourself</b><span>EXERCISE 01 · 10 XP</span></div><p>Enter an R expression that adds <b>12</b> and <b>7</b>.</p>
     <div class="editor"><div class="editor-bar"><span class="dots"><i></i><i></i><i></i></span><span>R console · exercise.R</span><span>⌁</span></div><div class="editor-inner"><div class="line-no">1</div><textarea id="code" spellcheck="false" aria-label="R code editor" placeholder="Type your R expression here"></textarea></div></div>
-    <div class="actions"><span class="hint">Use + to add two numbers</span><button class="check" id="check">Check answer&nbsp; ↗</button></div><div id="feedback" class="feedback" role="status"></div><div id="hintPanel" class="hint-panel" role="note"></div><div class="continue-row" id="continueOne"><button class="continue" id="goLessonTwo">Continue: store a vector &nbsp;→</button></div>
-    <div class="console-note">Prototype checker: checks the expression’s structure and expected result. Full R execution will be needed before using this for advanced exercises.</div>
+    <div class="actions"><span class="hint">Use + to add two numbers</span><button class="check" id="check">Run &amp; check in R&nbsp; ↗</button></div><div id="feedback" class="feedback" role="status"></div><div id="hintPanel" class="hint-panel" role="note"></div><div class="continue-row" id="continueOne"><button class="continue" id="goLessonTwo">Continue: store a vector &nbsp;→</button></div>
+    <div class="console-note" id="runtimeNote">R runs in your browser using WebAssembly. The first check downloads the R runtime; your code is evaluated in an isolated R environment.</div>
    </div>
    </article>
    <article class="lesson lesson-next" id="lessonTwo">
@@ -48,8 +48,8 @@ gene_counts</div><p>Here, the values are hypothetical raw counts. Assigning them
     <div class="callout"><strong>Practice data</strong> &nbsp;The four numbers in the exercise are invented values for practicing R syntax, not experimental results.</div>
     <div class="taskline"><b>Try it yourself</b><span>EXERCISE 02 · 15 XP</span></div><p>Create an object named <code style="color:#c5e5b5;font-family:var(--mono)">counts</code> containing the four values <b>12, 18, 9, 15</b> in that order. Use <code style="color:#c5e5b5;font-family:var(--mono)">c()</code>.</p>
     <div class="editor"><div class="editor-bar"><span class="dots"><i></i><i></i><i></i></span><span>R console · exercise.R</span><span>⌁</span></div><div class="editor-inner"><div class="line-no">1</div><textarea id="codeTwo" spellcheck="false" aria-label="R code editor for vector exercise" placeholder="Write your R code here"></textarea></div></div>
-    <div class="actions"><span class="hint">Name ← value · c(value, value, …)</span><button class="check" id="checkTwo">Check answer&nbsp; ↗</button></div><div id="feedbackTwo" class="feedback" role="status"></div><div id="hintPanelTwo" class="hint-panel" role="note"></div>
-    <div class="console-note">This lesson uses a narrow teaching checker for this vector pattern. It does not run R or verify statistical analyses.</div>
+    <div class="actions"><span class="hint">Name ← value · c(value, value, …)</span><button class="check" id="checkTwo">Run &amp; check in R&nbsp; ↗</button></div><div id="feedbackTwo" class="feedback" role="status"></div><div id="hintPanelTwo" class="hint-panel" role="note"></div>
+    <div class="console-note">R runs locally in your browser through WebAssembly; exercise checks assess the task goal, not one exact spelling of valid code.</div>
     </div>
    </article>
    <aside class="sidecol">
@@ -72,35 +72,52 @@ gene_counts</div><p>Here, the values are hypothetical raw counts. Assigning them
 <script>
 const code=document.querySelector('#code'), feedback=document.querySelector('#feedback'), hintPanel=document.querySelector('#hintPanel');
 const continueOne=document.querySelector('#continueOne');
-document.querySelector('#check').addEventListener('click',()=>{
- const src=code.value.trim();
- hintPanel.className='hint-panel';
- if(/^12\s*\+\s*7\s*=\s*$/.test(src)){
-   feedback.className='feedback show no';
-   feedback.innerHTML='You have the right numbers, but the trailing <code>=</code> makes the expression incomplete. R expects a value or expression after an assignment sign.';
-   const explain=document.createElement('button'); explain.type='button'; explain.textContent='Explain the difference'; explain.onclick=()=>{hintPanel.className='hint-panel show';hintPanel.innerHTML='To calculate a result, write <code>12 + 7</code>; R will print <code>19</code>. A single <code>=</code> can assign a value when it has a name on the left (for example, <code>total = 12 + 7</code>). To ask whether two values are equal, use <code>==</code>, as in <code>19 == 12 + 7</code>.';};
-   feedback.append(' '); feedback.append(explain); return;
+let webRInstance=null, userEnv=null, webRReady=null;
+async function getR(){
+ if(!webRReady){
+   webRReady=(async()=>{
+     const {WebR,ChannelType}=await import('https://webr.r-wasm.org/v0.6.0/webr.mjs');
+     webRInstance=new WebR({channelType:ChannelType.PostMessage});
+     await webRInstance.init();
+     userEnv=await webRInstance.evalR('new.env(parent = baseenv())');
+     document.querySelector('#runtimeNote').textContent='R is ready in this browser session. Code runs in a separate exercise environment inside WebAssembly; it is not sent to an R server.';
+     return webRInstance;
+   })().catch(error=>{webRReady=null;throw error;});
  }
- // Deliberately narrow demo checker: accept only a basic numeric addition expression.
- const match=src.match(/^\s*(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)\s*;?\s*$/);
- if(!match){feedback.className='feedback show no';feedback.textContent='R could not read this as the requested calculation. Use two numbers joined with +, with no equals sign at the end (for example: 3 + 4).';return;}
- const answer=Number(match[1])+Number(match[2]);
- if(Number(match[1])===12&&Number(match[2])===7&&answer===19){feedback.className='feedback show ok';feedback.textContent='Correct — R evaluates 12 + 7 to 19. First expression complete!';continueOne.className='continue-row visible';}
- else {feedback.className='feedback show no';feedback.textContent=`This expression evaluates to ${answer}. Try adding 12 and 7.`;}
+ return webRReady;
+}
+function showRunError(target,panel,error){
+ target.className='feedback show no';
+ target.textContent=`R stopped with a ${error?.name==='WebRWorkerError'?'runtime':'syntax or runtime'} error: ${error?.message||'unknown error'}. Read the message for the clue, then inspect the code around the part R mentions.`;
+ panel.className='hint-panel show';
+ panel.textContent='Try to locate the cause from R’s own message first. Check that the expression is complete and that each function call has the inputs it needs. Use the clue to make a correction yourself before checking again.';
+}
+document.querySelector('#check').addEventListener('click',async()=>{
+ const src=code.value.trim();hintPanel.className='hint-panel';continueOne.className='continue-row';
+ if(!src){feedback.className='feedback show no';feedback.textContent='Write an R expression first. The question asks for the sum of 12 and 7.';return;}
+ const button=document.querySelector('#check');button.disabled=true;button.textContent='Starting R…';feedback.className='feedback show';feedback.textContent='Loading R in your browser. The first run may take a moment.';
+ try{
+   const R=await getR();button.textContent='Running R…';
+   const value=await R.evalRNumber(src,{env:userEnv});
+   if(value===19){feedback.className='feedback show ok';feedback.textContent=`Correct — R evaluated your expression to ${value}. Addition works in either operand order.`;continueOne.className='continue-row visible';}
+   else {feedback.className='feedback show no';feedback.textContent=`R ran your expression and returned ${value}. The task is to add 12 and 7; use the result to check both numbers and the operation.`;}
+ }catch(error){showRunError(feedback,hintPanel,error);}
+ finally{button.disabled=false;button.innerHTML='Run &amp; check in R&nbsp; ↗';}
 });
 document.querySelector('#goLessonTwo').addEventListener('click',()=>{document.querySelector('#lessonOne').style.display='none';document.querySelector('#lessonTwo').classList.add('visible');document.querySelector('#backLessonOne').classList.add('visible');document.querySelector('.crumb b').textContent='Objects and vectors';document.querySelector('#codeTwo').focus();});
 document.querySelector('#backLessonOne').addEventListener('click',()=>{document.querySelector('#lessonTwo').classList.remove('visible');document.querySelector('#lessonOne').style.display='block';document.querySelector('.crumb b').textContent='Getting started with R';});
 const codeTwo=document.querySelector('#codeTwo'),feedbackTwo=document.querySelector('#feedbackTwo'),hintTwo=document.querySelector('#hintPanelTwo');
-document.querySelector('#checkTwo').addEventListener('click',()=>{
+document.querySelector('#checkTwo').addEventListener('click',async()=>{
  const src=codeTwo.value.trim();hintTwo.className='hint-panel';
- const exact=/^counts\s*(?:<-|=)\s*c\s*\(\s*12\s*,\s*18\s*,\s*9\s*,\s*15\s*\)\s*;?$/.test(src);
- if(exact){feedbackTwo.className='feedback show ok';feedbackTwo.textContent='Correct — counts now holds a numeric vector with four values in order. In R, printing counts would show 12 18 9 15.';return;}
- let why='R could not match the requested object and vector. Check the object name, assignment arrow, c(), and the order of the four values.';
- if(/^counts\s*(?:<-|=)\s*12\s*,/.test(src)){why='The values are separated by commas, but commas alone do not combine values into a vector in R. Put them inside c(...), for example c(12, 18, 9, 15).';}
- else if(/^counts\s*==/.test(src)){why='The operator == asks whether two values are equal; it does not store a result in counts. Use <- to assign the vector to the name counts.';}
- else if(/\bc\s*\(/.test(src)&&!/^counts\s*(?:<-|=)/.test(src)){why='You made a vector expression, but did not assign it to the requested object. Put counts <- before c(...).';}
- feedbackTwo.className='feedback show no';feedbackTwo.textContent=why;
- if(src&&!/^counts\s*(?:<-|=)\s*c\s*\(/.test(src)){const b=document.createElement('button');b.type='button';b.textContent='Show a hint';b.onclick=()=>{hintTwo.className='hint-panel show';hintTwo.innerHTML='R assignment uses <code>&lt;-</code> with the object name on the left. The base R function <code>c()</code> concatenates values into one vector. Example structure: <code>object_name &lt;- c(value1, value2)</code>.';};feedbackTwo.append(' ');feedbackTwo.append(b);}
+ if(!src){feedbackTwo.className='feedback show no';feedbackTwo.textContent='Write an assignment that creates the requested counts object.';return;}
+ const button=document.querySelector('#checkTwo');button.disabled=true;button.textContent='Starting R…';feedbackTwo.className='feedback show';feedbackTwo.textContent='Running your code in R…';
+ try{
+   const R=await getR();button.textContent='Running R…';await R.evalR(src,{env:userEnv});
+   const correct=await R.evalRBoolean('exists("counts", inherits = FALSE) && is.numeric(counts) && identical(as.numeric(counts), c(12, 18, 9, 15))',{env:userEnv});
+   if(correct){feedbackTwo.className='feedback show ok';feedbackTwo.textContent='Correct — R created counts as a numeric vector with the four requested values in order. You may use either <- or = for this assignment.';}
+   else {feedbackTwo.className='feedback show no';feedbackTwo.textContent='R ran your code, but the task conditions are not met yet. Re-read the request and inspect the object name, its values, and their order. Try a hint if you want a nudge.';const b=document.createElement('button');b.type='button';b.textContent='Show a hint';b.onclick=()=>{hintTwo.className='hint-panel show';hintTwo.innerHTML='The grader looks for an object named <code>counts</code> and checks that it contains four numeric values in the requested order. Think about which function combines separate values into a vector and where assignment puts the object name.';};feedbackTwo.append(' ');feedbackTwo.append(b);}
+ }catch(error){showRunError(feedbackTwo,hintTwo,error);}
+ finally{button.disabled=false;button.innerHTML='Run &amp; check in R&nbsp; ↗';}
 });
 </script>
 </body></html>
