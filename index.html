@@ -365,7 +365,7 @@ runMatrixExercise('codeSeven','Seven','summarize-gene-counts',15,'identical(as.n
 runMatrixExercise('codeEight','Eight','extract-gene-counts',15,'identical(as.numeric(.learner_last_value$value),c(42,38,51,48))',/toy_counts\s*\[/);
 function renderMilestonesDialog(){let d=document.querySelector('#milestoneDialog');if(!d){d=document.createElement('dialog');d.id='milestoneDialog';d.className='journal-dialog';d.innerHTML='<div class="journal-head"><h2>Course milestones</h2><button class="journal-close" type="button">Close ✕</button></div><div class="milestone-dialog-list"></div>';document.body.append(d);d.querySelector('button').addEventListener('click',()=>d.close());}const list=d.querySelector('.milestone-dialog-list');list.replaceChildren();milestoneRules.forEach(([id,title,desc,target],i)=>{const b=document.createElement('button');b.className='step milestone-link';b.innerHTML=`<span class="node">${gameState.missions.includes(id)?'✓':i+1}</span><span><b>${title}</b><small>${desc}</small></span>`;b.addEventListener('click',()=>{d.close();openCourseLesson(target);});list.append(b);});}
 document.querySelector('#openMilestones').addEventListener('click',()=>{renderMilestonesDialog();document.querySelector('#milestoneDialog').showModal();});
-const donationPageUrl='';
+const donationPageUrl='https://buymeacoffee.com/wilsonmyles';
 try{const donationUrl=new URL(donationPageUrl);if(donationUrl.protocol==='https:'&&(donationUrl.hostname==='buymeacoffee.com'||donationUrl.hostname==='www.buymeacoffee.com')&&donationUrl.pathname.replaceAll('/','')){const link=document.querySelector('#coffeeLink');link.href=donationUrl.href;document.querySelector('#supportCard').hidden=false;}}catch{}
 renderProgress();
 </script>
