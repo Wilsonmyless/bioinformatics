@@ -88,7 +88,7 @@ async function getR(){
  }
  return webRReady;
 }
-function showRunError(target,panel,error){
+function showRunError(target,panel,error,source){
  const message=error?.message||'R returned an error without a message.';
  const syntax=/parse\(|unexpected|incomplete|end of input/i.test(message);
  target.className='feedback show no';target.replaceChildren();
@@ -99,7 +99,8 @@ function showRunError(target,panel,error){
  panel.className='hint-panel show';panel.replaceChildren();
  const hintTitle=document.createElement('h4');hintTitle.textContent='Hint — think it through';
  const hintText=document.createElement('p');
- if(/unexpected end of input/i.test(message)) hintText.textContent='R reached the end of what you typed while it was still expecting more code. Look just before the marker: does the final operator have what it needs after it? Make a change and try again.';
+ if(/unexpected end of input/i.test(message)&&/(^|[^=!<>])=\s*$/.test(source.trim())) hintText.textContent='The final single = is the issue here. In R, a single = assigns a value to a name in an assignment such as total = 12 + 7; it does not mean “show this calculation”. Here there is no value after =, so R reaches the end of the code unexpectedly. Remove the final = and run it again. If you meant to compare values, R uses ==.';
+ else if(/unexpected end of input/i.test(message)) hintText.textContent='R reached the end of what you typed while it was still expecting more code. Check the final operator or opening delimiter and decide what needs to complete the expression.';
  else if(syntax) hintText.textContent='R could not parse this as a complete expression. The marker shows where it noticed the problem; the cause may be immediately before it. Check nearby operators and matching brackets or parentheses.';
  else hintText.textContent='R understood enough to start, but encountered a problem while evaluating the code. Use the named object, function, or value in the message as a clue; check its spelling and the kind of input it received.';
  panel.append(hintTitle,hintText);
@@ -113,7 +114,7 @@ document.querySelector('#check').addEventListener('click',async()=>{
    const value=await R.evalRNumber(src,{env:userEnv});
    if(value===19){feedback.className='feedback show ok';feedback.textContent=`Correct — R evaluated your expression to ${value}. Addition works in either operand order.`;continueOne.className='continue-row visible';}
    else {feedback.className='feedback show no';feedback.textContent=`R ran your expression and returned ${value}. The task is to add 12 and 7; use the result to check both numbers and the operation.`;}
- }catch(error){showRunError(feedback,hintPanel,error);}
+ }catch(error){showRunError(feedback,hintPanel,error,src);}
  finally{button.disabled=false;button.innerHTML='Run &amp; check in R&nbsp; ↗';}
 });
 document.querySelector('#goLessonTwo').addEventListener('click',()=>{document.querySelector('#lessonOne').style.display='none';document.querySelector('#lessonTwo').classList.add('visible');document.querySelector('#backLessonOne').classList.add('visible');document.querySelector('.crumb b').textContent='Objects and vectors';document.querySelector('#codeTwo').focus();});
@@ -128,7 +129,7 @@ document.querySelector('#checkTwo').addEventListener('click',async()=>{
    const correct=await R.evalRBoolean('exists("counts", inherits = FALSE) && is.numeric(counts) && identical(as.numeric(counts), c(12, 18, 9, 15))',{env:userEnv});
    if(correct){feedbackTwo.className='feedback show ok';feedbackTwo.textContent='Correct — R created counts as a numeric vector with the four requested values in order. You may use either <- or = for this assignment.';}
    else {feedbackTwo.className='feedback show no';feedbackTwo.textContent='R ran your code, but the task conditions are not met yet. Re-read the request and inspect the object name, its values, and their order. Try a hint if you want a nudge.';const b=document.createElement('button');b.type='button';b.textContent='Show a hint';b.onclick=()=>{hintTwo.className='hint-panel show';hintTwo.innerHTML='The grader looks for an object named <code>counts</code> and checks that it contains four numeric values in the requested order. Think about which function combines separate values into a vector and where assignment puts the object name.';};feedbackTwo.append(' ');feedbackTwo.append(b);}
- }catch(error){showRunError(feedbackTwo,hintTwo,error);}
+ }catch(error){showRunError(feedbackTwo,hintTwo,error,src);}
  finally{button.disabled=false;button.innerHTML='Run &amp; check in R&nbsp; ↗';}
 });
 </script>
