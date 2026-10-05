@@ -12,6 +12,7 @@
 .hero-art{display:flex;align-items:center;gap:14px}.helix{width:95px;height:73px;overflow:visible;filter:drop-shadow(0 0 5px #48e4ff55)}.helix path{fill:none;stroke-linecap:round;stroke-width:2.3}.helix .cyan{stroke:#4deaff}.helix .pink{stroke:#ff4fd8}.helix .rung{stroke:#a2b6ff;stroke-width:1;opacity:.78}.helix-note{font:9px var(--mono);letter-spacing:.8px;color:#6d8490;text-transform:uppercase;margin-top:5px;text-align:right}.feedback button{margin-left:8px;border:1px solid #738177;background:transparent;border-radius:5px;padding:4px 7px;color:inherit;font-size:10px}.hint-panel{display:none;background:#202e2a;border:1px solid #364840;border-radius:8px;color:#cad6cd;font-size:12px;line-height:1.6;padding:11px 13px;margin-top:8px}.hint-panel.show{display:block}.hint-panel code{font:11px var(--mono);color:var(--mint)}
 .lesson-next{display:none}.lesson-next.visible{display:block}.continue-row{display:none;margin-top:13px;padding-top:12px;border-top:1px solid var(--line);text-align:right}.continue-row.visible{display:block}.continue{border:1px solid #52664e;background:#27382b;color:var(--mint);border-radius:7px;padding:9px 12px;font-size:12px;font-weight:700}.continue:hover{background:#304832}.lesson-back{display:none;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:6px;padding:6px 9px;font-size:11px}.lesson-back.visible{display:inline-block}
 .concept-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:13px 0 16px}.concept{border:1px solid #2e4038;background:#1c2925;border-radius:9px;padding:12px}.concept b{display:block;font-size:12px;margin-bottom:6px;color:#dce9dc}.concept p{font-size:11px;line-height:1.55;margin:0;color:#aebbb2}.code-example{background:#111917;border:1px solid #2c3a36;border-radius:8px;padding:11px 13px;margin:12px 0 15px;font:12px/1.8 var(--mono);color:#c8e4bf;white-space:pre-wrap}.source-links{font-size:10px;color:var(--muted);margin-top:12px}.source-links a{color:var(--blue);text-decoration:none}.source-links a:hover{text-decoration:underline}
+.quick-guide{border:1px solid #30423a;background:#1a2723;border-radius:8px;margin:13px 0 17px;padding:0 12px}.quick-guide summary{cursor:pointer;color:#c7d5ca;font-size:11px;padding:10px 0}.quick-guide p{margin:0 0 11px;font-size:11px;color:var(--muted);line-height:1.55}.feedback h4,.hint-panel h4{font-size:11px;letter-spacing:.3px;text-transform:uppercase;margin:0 0 6px;color:inherit}.feedback pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.5 var(--mono);margin:0;color:inherit}.feedback-section+.feedback-section{border-top:1px solid #ffffff20;margin-top:9px;padding-top:9px}.hint-panel p{margin:0}
 </style>
 </head>
 <body>
@@ -29,6 +30,7 @@
    <article class="lesson" id="lessonOne">
     <div class="lesson-head"><span class="tag">LESSON 1 OF 4</span><h2>Your first R expression</h2><p>Start by asking R to calculate something. This is the same console you’ll use to inspect real datasets later.</p></div>
     <div class="lesson-body"><h3>R is a calculator—and much more</h3><p>R evaluates expressions and returns a result. For example, <code style="color:#c5e5b5;font-family:var(--mono)">2 + 2</code> evaluates to <code style="color:#c5e5b5;font-family:var(--mono)">4</code>. In bioinformatics, you’ll use the same idea to transform measurements, summarize samples, and make plots.</p><div class="callout"><strong>Research note</strong> &nbsp;A calculation is only as meaningful as its inputs. We’ll keep track of what each value represents as we move from toy examples to biological measurements.</div>
+    <details class="quick-guide"><summary>How to read an R error message</summary><p>R reports a message and often marks a place in your code. That marker shows where R noticed a problem; the cause may be just before it. Read the message, inspect nearby code, change one thing, then run it again.</p></details>
     <div class="taskline"><b>Try it yourself</b><span>EXERCISE 01 · 10 XP</span></div><p>Enter an R expression that adds <b>12</b> and <b>7</b>.</p>
     <div class="editor"><div class="editor-bar"><span class="dots"><i></i><i></i><i></i></span><span>R console · exercise.R</span><span>⌁</span></div><div class="editor-inner"><div class="line-no">1</div><textarea id="code" spellcheck="false" aria-label="R code editor" placeholder="Type your R expression here"></textarea></div></div>
     <div class="actions"><span class="hint">Use + to add two numbers</span><button class="check" id="check">Run &amp; check in R&nbsp; ↗</button></div><div id="feedback" class="feedback" role="status"></div><div id="hintPanel" class="hint-panel" role="note"></div><div class="continue-row" id="continueOne"><button class="continue" id="goLessonTwo">Continue: store a vector &nbsp;→</button></div>
@@ -87,10 +89,20 @@ async function getR(){
  return webRReady;
 }
 function showRunError(target,panel,error){
- target.className='feedback show no';
- target.textContent=`R stopped with a ${error?.name==='WebRWorkerError'?'runtime':'syntax or runtime'} error: ${error?.message||'unknown error'}. Read the message for the clue, then inspect the code around the part R mentions.`;
- panel.className='hint-panel show';
- panel.textContent='Try to locate the cause from R’s own message first. Check that the expression is complete and that each function call has the inputs it needs. Use the clue to make a correction yourself before checking again.';
+ const message=error?.message||'R returned an error without a message.';
+ const syntax=/parse\(|unexpected|incomplete|end of input/i.test(message);
+ target.className='feedback show no';target.replaceChildren();
+ const errorSection=document.createElement('div');errorSection.className='feedback-section';
+ const errorTitle=document.createElement('h4');errorTitle.textContent='R error message';
+ const errorText=document.createElement('pre');errorText.textContent=message;
+ errorSection.append(errorTitle,errorText);target.append(errorSection);
+ panel.className='hint-panel show';panel.replaceChildren();
+ const hintTitle=document.createElement('h4');hintTitle.textContent='Hint — think it through';
+ const hintText=document.createElement('p');
+ if(/unexpected end of input/i.test(message)) hintText.textContent='R reached the end of what you typed while it was still expecting more code. Look just before the marker: does the final operator have what it needs after it? Make a change and try again.';
+ else if(syntax) hintText.textContent='R could not parse this as a complete expression. The marker shows where it noticed the problem; the cause may be immediately before it. Check nearby operators and matching brackets or parentheses.';
+ else hintText.textContent='R understood enough to start, but encountered a problem while evaluating the code. Use the named object, function, or value in the message as a clue; check its spelling and the kind of input it received.';
+ panel.append(hintTitle,hintText);
 }
 document.querySelector('#check').addEventListener('click',async()=>{
  const src=code.value.trim();hintPanel.className='hint-panel';continueOne.className='continue-row';
