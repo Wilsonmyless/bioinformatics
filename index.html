@@ -96,6 +96,29 @@ function awardMission(id,xp,label){
  gameState.missions.push(id);gameState.xp+=xp;
  const toast=document.querySelector('#xpToast');toast.textContent=`+${xp} XP · ${label}`;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);renderProgress();
 }
+async function diagnoseCounts(R){
+ const exists=await R.evalRBoolean('exists("counts", inherits = FALSE)',{env:userEnv});
+ if(!exists)return {diagnosis:'R ran your code, but there is no object named counts in the exercise environment.',hint:'The task asks you to save the vector with the exact name counts. Check the name on the left side of your assignment.'};
+ const numeric=await R.evalRBoolean('is.numeric(counts) && is.atomic(counts)',{env:userEnv});
+ if(!numeric)return {diagnosis:'R created counts, but it is not a numeric vector.',hint:'The requested values are numbers. Check whether they were entered as text in quotation marks or combined into a different kind of object.'};
+ const length=await R.evalRNumber('length(counts)',{env:userEnv}), expected=[12,18,9,15];
+ const differences=[];
+ for(let i=0;i<Math.min(length,expected.length);i++){
+  const value=await R.evalRNumber(`as.numeric(counts[${i+1}])`,{env:userEnv});
+  if(value!==expected[i])differences.push(`position ${i+1} is ${Number.isNaN(value)?'NA':value}; the task requests ${expected[i]} there`);
+ }
+ const parts=[];
+ if(length<expected.length)parts.push(`counts has ${length} value${length===1?'':'s'}; the task asks for ${expected.length}.`);
+ if(length>expected.length)parts.push(`counts has ${length} values; the task asks for ${expected.length}.`);
+ if(differences.length)parts.push(`Values in the wrong positions or with different values: ${differences.join('; ')}.`);
+ if(!parts.length)parts.push('The values and length match, but the object still differs from the requested numeric vector. Check its type and any missing values.');
+ let hint='Compare the vector from left to right with the four values in the prompt. c() keeps values in the order you give them; a decimal point changes a value.';
+ if(length<expected.length)hint=`One or more values are missing: the object has ${length}, but the prompt lists four. Check the number of entries inside c().`;
+ if(length>expected.length)hint=`There are extra entries: the object has ${length}, while the prompt lists four. Check for an unintended comma-separated value.`;
+ if(differences.length&&length===expected.length)hint='At least one entry differs from the requested value at that position. Check the order and read each number carefully; a decimal point can change its value.';
+ if(differences.length&&length!==expected.length)hint+=` Also compare ${differences.map(d=>d.split(';')[0]).join(' and ')} with the prompt.`;
+ return {diagnosis:parts.join(' '),hint};
+}
 renderProgress();
 async function getR(){
  if(!webRReady){
@@ -151,7 +174,7 @@ document.querySelector('#checkTwo').addEventListener('click',async()=>{
    const R=await getR();button.textContent='Running R…';await R.evalR(src,{env:userEnv});
    const correct=await R.evalRBoolean('exists("counts", inherits = FALSE) && is.numeric(counts) && identical(as.numeric(counts), c(12, 18, 9, 15))',{env:userEnv});
    if(correct){feedbackTwo.className='feedback show ok';feedbackTwo.textContent='Correct — R created counts as a numeric vector with the four requested values in order. You may use either <- or = for this assignment.';awardMission('create-counts-vector',15,'Counts vector');if(!gameState.milestones.includes('r-foundations')){gameState.milestones.push('r-foundations');renderProgress();}}
-   else {feedbackTwo.className='feedback show no';feedbackTwo.textContent='R ran your code, but the task conditions are not met yet. Re-read the request and inspect the object name, its values, and their order. Try a hint if you want a nudge.';const b=document.createElement('button');b.type='button';b.textContent='Show a hint';b.onclick=()=>{hintTwo.className='hint-panel show';hintTwo.innerHTML='The grader looks for an object named <code>counts</code> and checks that it contains four numeric values in the requested order. Think about which function combines separate values into a vector and where assignment puts the object name.';};feedbackTwo.append(' ');feedbackTwo.append(b);}
+   else {const result=await diagnoseCounts(R);feedbackTwo.className='feedback show no';feedbackTwo.replaceChildren();const section=document.createElement('div');section.className='feedback-section';const title=document.createElement('h4');title.textContent='Task check — R ran without a syntax error';const detail=document.createElement('pre');detail.textContent=result.diagnosis;section.append(title,detail);feedbackTwo.append(section);hintTwo.className='hint-panel show';hintTwo.replaceChildren();const hintTitle=document.createElement('h4');hintTitle.textContent='Hint based on your code';const hintText=document.createElement('p');hintText.textContent=result.hint;hintTwo.append(hintTitle,hintText);}
  }catch(error){showRunError(feedbackTwo,hintTwo,error,src);}
  finally{button.disabled=false;button.innerHTML='Run &amp; check in R&nbsp; ↗';}
 });
